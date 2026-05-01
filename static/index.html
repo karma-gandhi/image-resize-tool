@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Resizer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 580px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 6px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 28px; }
+
+    .drop-zone {
+      border: 2px dashed #d0d7de;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fafbfc;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #4f46e5;
+      background: #f5f3ff;
+    }
+    .drop-zone svg { color: #9ca3af; margin-bottom: 12px; }
+    .drop-zone p { color: #6b7280; font-size: 15px; }
+    .drop-zone span { color: #4f46e5; font-weight: 600; }
+    .drop-zone .hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
+    #fileInput { display: none; }
+
+    .file-list { margin-top: 20px; display: none; }
+    .file-list h3 {
+      font-size: 12px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #374151;
+    }
+    .file-item .name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-item .size { color: #9ca3af; font-size: 12px; white-space: nowrap; }
+    .file-item .remove {
+      cursor: pointer;
+      color: #d1d5db;
+      font-size: 16px;
+      padding: 0 2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .file-item .remove:hover { color: #ef4444; }
+
+    .sizes-info { margin-top: 20px; display: flex; gap: 10px; }
+    .size-badge {
+      flex: 1;
+      background: #f0f4ff;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      color: #4f46e5;
+      font-weight: 500;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: background 0.2s;
+    }
+    .btn:hover:not(:disabled) { background: #4338ca; }
+    .btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    .status.loading { background: #eff6ff; color: #1d4ed8; display: flex; }
+    .status.success { background: #f0fdf4; color: #15803d; display: block; }
+    .status.error   { background: #fef2f2; color: #dc2626; display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid #bfdbfe;
+      border-top-color: #1d4ed8;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Image Resizer</h1>
+    <p class="subtitle">Upload images and get them resized to two sizes — delivered as a single ZIP file.</p>
+
+    <div class="drop-zone" id="dropZone">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+      </svg>
+      <p>Drop images here or <span>browse files</span></p>
+      <p class="hint">JPG, PNG, WEBP &mdash; up to 50 MB per file</p>
+      <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp" />
+    </div>
+
+    <div class="file-list" id="fileList">
+      <h3 id="fileCount">0 files selected</h3>
+      <div id="fileItems"></div>
+    </div>
+
+    <div class="sizes-info">
+      <div class="size-badge">1280 &times; 900 px</div>
+      <div class="size-badge">2000 &times; 3000 px</div>
+    </div>
+
+    <button class="btn" id="uploadBtn" disabled>Resize &amp; Download ZIP</button>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const dropZone  = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList  = document.getElementById('fileList');
+    const fileItems = document.getElementById('fileItems');
+    const fileCount = document.getElementById('fileCount');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const status    = document.getElementById('status');
+
+    let selectedFiles = [];
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
+
+    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      addFiles(Array.from(e.dataTransfer.files));
+    });
+
+    function addFiles(newFiles) {
+      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+      newFiles = newFiles.filter(f => allowed.includes(f.type));
+      selectedFiles = [...selectedFiles, ...newFiles];
+      renderFileList();
+    }
+
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      renderFileList();
+    }
+
+    function formatSize(bytes) {
+      return bytes < 1024 * 1024
+        ? (bytes / 1024).toFixed(0) + ' KB'
+        : (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    function renderFileList() {
+      fileItems.innerHTML = '';
+      selectedFiles.forEach((file, i) => {
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.innerHTML = `
+          <span>&#128247;</span>
+          <span class="name">${file.name}</span>
+          <span class="size">${formatSize(file.size)}</span>
+          <span class="remove" onclick="removeFile(${i})" title="Remove">&#10005;</span>
+        `;
+        fileItems.appendChild(div);
+      });
+      fileList.style.display = selectedFiles.length ? 'block' : 'none';
+      fileCount.textContent  = `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} selected`;
+      uploadBtn.disabled     = selectedFiles.length === 0;
+      status.className       = 'status';
+    }
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFiles.length) return;
+
+      uploadBtn.disabled   = true;
+      status.className     = 'status loading';
+      status.innerHTML     = '<div class="spinner"></div> Resizing images, please wait&hellip;';
+
+      try {
+        const formData = new FormData();
+        selectedFiles.forEach(f => formData.append('files', f));
+
+        const response = await fetch('/resize', { method: 'POST', body: formData });
+        const errors   = response.headers.get('X-Processing-Errors');
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(err.detail || 'Processing failed');
+        }
+
+        const blob = await response.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = 'resized-images.zip';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        status.className = 'status success';
+        status.textContent = '&#10003; Done! Your ZIP is downloading.'
+          + (errors ? '  Note: ' + errors : '');
+
+      } catch (err) {
+        status.className  = 'status error';
+        status.textContent = '&#10007; ' + err.message;
+      }
+
+      uploadBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
