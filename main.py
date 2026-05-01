@@ -68,7 +68,7 @@ async def resize_images(files: List[UploadFile] = File(...)):
                     out = io.BytesIO()
                     resized.save(out, format="JPEG", quality=90, optimize=True)
                     out.seek(0)
-                    zf.writestr(f"resized-images/{stem}_{w}x{h}.jpg", out.read())
+                    zf.writestr(f"resized-images/{w}x{h}/{stem}_{w}x{h}.jpg", out.read())
 
                 processed += 1
 
