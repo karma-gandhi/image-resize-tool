@@ -8,16 +8,17 @@ import zipfile
 from pathlib import Path
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-import os
 
 app = FastAPI()
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-SIZES = [(1280, 900), (2000, 3000)]
+IMAGE_SIZES = [(1280, 900), (2000, 3000)]
+LOGO_SIZE   = (1030, 370)
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
-# More workers — each (image × size) pair runs as its own task
-_executor = ThreadPoolExecutor(max_workers=min(8, (os.cpu_count() or 2) * 2))
+# 2 workers: decoded JPEG can expand to ~30MB in memory; keep peak RAM predictable on free-tier
+_executor = ThreadPoolExecutor(max_workers=2)
+_resize_semaphore = asyncio.Semaphore(2)
 
 
 def to_rgb(img: Image.Image) -> Image.Image:
@@ -54,8 +55,7 @@ async def index():
     )
 
 
-@app.post("/resize")
-async def resize_images(files: List[UploadFile] = File(...)):
+async def _run_resize(files: List[UploadFile], sizes: list, zip_name: str):
     if not files:
         raise HTTPException(status_code=400, detail="No files uploaded")
 
@@ -68,8 +68,7 @@ async def resize_images(files: List[UploadFile] = File(...)):
         return {"filename": file.filename, "contents": contents}
 
     uploads = await asyncio.gather(*[read_upload(f) for f in files])
-
-    valid = [u for u in uploads if "contents" in u]
+    valid  = [u for u in uploads if "contents" in u]
     errors = [f"{u['filename']}: {u['error']}" for u in uploads if "error" in u]
 
     if not valid:
@@ -78,12 +77,16 @@ async def resize_images(files: List[UploadFile] = File(...)):
             detail="No images could be processed. " + " | ".join(errors),
         )
 
-    # Fan out every (image × size) as its own parallel task
     loop = asyncio.get_running_loop()
+
+    async def throttled_resize(contents, filename, w, h):
+        async with _resize_semaphore:
+            return await loop.run_in_executor(_executor, resize_crop_to_bytes, contents, filename, w, h)
+
     tasks = [
-        loop.run_in_executor(_executor, resize_crop_to_bytes, u["contents"], u["filename"], w, h)
+        throttled_resize(u["contents"], u["filename"], w, h)
         for u in valid
-        for w, h in SIZES
+        for w, h in sizes
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -96,7 +99,7 @@ async def resize_images(files: List[UploadFile] = File(...)):
             else:
                 path, data = r
                 zf.writestr(path, data)
-                processed_files.add(path.split("/")[2])  # extract original filename
+                processed_files.add(path.split("/")[2])
 
     if not processed_files:
         raise HTTPException(
@@ -105,11 +108,21 @@ async def resize_images(files: List[UploadFile] = File(...)):
         )
 
     zip_buffer.seek(0)
-    headers = {"Content-Disposition": "attachment; filename=resized-images.zip"}
+    headers = {"Content-Disposition": f"attachment; filename={zip_name}"}
     if errors:
         headers["X-Processing-Errors"] = " | ".join(errors[:5])
 
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
+
+
+@app.post("/resize")
+async def resize_images(files: List[UploadFile] = File(...)):
+    return await _run_resize(files, IMAGE_SIZES, "resized-images.zip")
+
+
+@app.post("/resize-logo")
+async def resize_logos(files: List[UploadFile] = File(...)):
+    return await _run_resize(files, [LOGO_SIZE], "resized-logos.zip")
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

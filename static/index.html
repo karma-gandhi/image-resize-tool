@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Resizer</title>
+  <title>Image &amp; Logo Resizer</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -18,18 +18,50 @@
     .card {
       background: white;
       border-radius: 16px;
-      padding: 40px;
+      padding: 32px 40px 40px;
       width: 100%;
       max-width: 580px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
-    h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 6px; }
-    .subtitle { color: #888; font-size: 14px; margin-bottom: 28px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: #f3f4f6;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border: none;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: #6b7280;
+      transition: all 0.18s;
+    }
+    .tab-btn.active {
+      background: white;
+      color: #4f46e5;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .panel-title { font-size: 22px; color: #1a1a2e; margin-bottom: 4px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
 
     .drop-zone {
       border: 2px dashed #d0d7de;
       border-radius: 12px;
-      padding: 40px 20px;
+      padding: 36px 20px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s;
@@ -39,13 +71,13 @@
       border-color: #4f46e5;
       background: #f5f3ff;
     }
-    .drop-zone svg { color: #9ca3af; margin-bottom: 12px; }
+    .drop-zone svg { color: #9ca3af; margin-bottom: 10px; }
     .drop-zone p { color: #6b7280; font-size: 15px; }
     .drop-zone span { color: #4f46e5; font-weight: 600; }
     .drop-zone .hint { font-size: 12px; color: #9ca3af; margin-top: 6px; }
-    #fileInput { display: none; }
+    input[type=file] { display: none; }
 
-    .file-list { margin-top: 20px; display: none; }
+    .file-list { margin-top: 18px; display: none; }
     .file-list h3 {
       font-size: 12px;
       color: #9ca3af;
@@ -81,7 +113,7 @@
     }
     .file-item .remove:hover { color: #ef4444; }
 
-    .sizes-info { margin-top: 20px; display: flex; gap: 10px; }
+    .sizes-info { margin-top: 18px; display: flex; gap: 10px; }
     .size-badge {
       flex: 1;
       background: #f0f4ff;
@@ -104,14 +136,14 @@
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 24px;
+      margin-top: 22px;
       transition: background 0.2s;
     }
     .btn:hover:not(:disabled) { background: #4338ca; }
     .btn:disabled { background: #a5b4fc; cursor: not-allowed; }
 
     .status {
-      margin-top: 16px;
+      margin-top: 14px;
       padding: 12px 16px;
       border-radius: 8px;
       font-size: 14px;
@@ -136,128 +168,183 @@
 </head>
 <body>
   <div class="card">
-    <h1>Image Resizer</h1>
-    <p class="subtitle">Upload images and get them resized to two sizes — delivered as a single ZIP file.</p>
 
-    <div class="drop-zone" id="dropZone">
-      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
-      </svg>
-      <p>Drop images here or <span>browse files</span></p>
-      <p class="hint">JPG, PNG, WEBP &mdash; up to 50 MB per file</p>
-      <input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp" />
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="resizer">Image Resizer</button>
+      <button class="tab-btn"        data-tab="logo">Logo Resizer</button>
     </div>
 
-    <div class="file-list" id="fileList">
-      <h3 id="fileCount">0 files selected</h3>
-      <div id="fileItems"></div>
+    <!-- ── Image Resizer panel ── -->
+    <div class="panel active" id="panel-resizer">
+      <h1 class="panel-title">Image Resizer</h1>
+      <p class="subtitle">Resize images to two sizes and download as a single ZIP.</p>
+
+      <div class="drop-zone" id="dz-resizer">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p>Drop images here or <span>browse files</span></p>
+        <p class="hint">JPG, PNG, WEBP &mdash; up to 50 MB per file</p>
+        <input type="file" id="fi-resizer" multiple accept="image/jpeg,image/png,image/webp" />
+      </div>
+
+      <div class="file-list" id="fl-resizer">
+        <h3 id="fc-resizer">0 files selected</h3>
+        <div id="fi-items-resizer"></div>
+      </div>
+
+      <div class="sizes-info">
+        <div class="size-badge">1280 &times; 900 px</div>
+        <div class="size-badge">2000 &times; 3000 px</div>
+      </div>
+
+      <button class="btn" id="btn-resizer" disabled>Resize &amp; Download ZIP</button>
+      <div class="status" id="st-resizer"></div>
     </div>
 
-    <div class="sizes-info">
-      <div class="size-badge">1280 &times; 900 px</div>
-      <div class="size-badge">2000 &times; 3000 px</div>
+    <!-- ── Logo Resizer panel ── -->
+    <div class="panel" id="panel-logo">
+      <h1 class="panel-title">Logo Resizer</h1>
+      <p class="subtitle">Resize logos to 1030 &times; 370 px and download as a single ZIP.</p>
+
+      <div class="drop-zone" id="dz-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+        </svg>
+        <p>Drop logos here or <span>browse files</span></p>
+        <p class="hint">JPG, PNG, WEBP &mdash; up to 50 MB per file</p>
+        <input type="file" id="fi-logo" multiple accept="image/jpeg,image/png,image/webp" />
+      </div>
+
+      <div class="file-list" id="fl-logo">
+        <h3 id="fc-logo">0 files selected</h3>
+        <div id="fi-items-logo"></div>
+      </div>
+
+      <div class="sizes-info">
+        <div class="size-badge">1030 &times; 370 px</div>
+      </div>
+
+      <button class="btn" id="btn-logo" disabled>Resize &amp; Download ZIP</button>
+      <div class="status" id="st-logo"></div>
     </div>
 
-    <button class="btn" id="uploadBtn" disabled>Resize &amp; Download ZIP</button>
-
-    <div class="status" id="status"></div>
   </div>
 
   <script>
-    const dropZone  = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const fileList  = document.getElementById('fileList');
-    const fileItems = document.getElementById('fileItems');
-    const fileCount = document.getElementById('fileCount');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const status    = document.getElementById('status');
-
-    let selectedFiles = [];
-
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
-
-    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropZone.classList.remove('drag-over');
-      addFiles(Array.from(e.dataTransfer.files));
+    // ── Tab switching ──────────────────────────────────────────────
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
     });
 
-    function addFiles(newFiles) {
-      const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-      newFiles = newFiles.filter(f => allowed.includes(f.type));
-      selectedFiles = [...selectedFiles, ...newFiles];
-      renderFileList();
-    }
+    // ── Generic uploader factory ───────────────────────────────────
+    function makeUploader({ dropZoneId, fileInputId, fileListId, fileCountId, fileItemsId, btnId, statusId, endpoint, zipName }) {
+      const dropZone  = document.getElementById(dropZoneId);
+      const fileInput = document.getElementById(fileInputId);
+      const fileList  = document.getElementById(fileListId);
+      const fileCount = document.getElementById(fileCountId);
+      const fileItems = document.getElementById(fileItemsId);
+      const btn       = document.getElementById(btnId);
+      const status    = document.getElementById(statusId);
+      let files = [];
 
-    function removeFile(index) {
-      selectedFiles.splice(index, 1);
-      renderFileList();
-    }
-
-    function formatSize(bytes) {
-      return bytes < 1024 * 1024
-        ? (bytes / 1024).toFixed(0) + ' KB'
-        : (bytes / 1024 / 1024).toFixed(1) + ' MB';
-    }
-
-    function renderFileList() {
-      fileItems.innerHTML = '';
-      selectedFiles.forEach((file, i) => {
-        const div = document.createElement('div');
-        div.className = 'file-item';
-        div.innerHTML = `
-          <span>&#128247;</span>
-          <span class="name">${file.name}</span>
-          <span class="size">${formatSize(file.size)}</span>
-          <span class="remove" onclick="removeFile(${i})" title="Remove">&#10005;</span>
-        `;
-        fileItems.appendChild(div);
+      dropZone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
+      dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        addFiles(Array.from(e.dataTransfer.files));
       });
-      fileList.style.display = selectedFiles.length ? 'block' : 'none';
-      fileCount.textContent  = `${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''} selected`;
-      uploadBtn.disabled     = selectedFiles.length === 0;
-      status.className       = 'status';
-    }
 
-    uploadBtn.addEventListener('click', async () => {
-      if (!selectedFiles.length) return;
-
-      uploadBtn.disabled   = true;
-      status.className     = 'status loading';
-      status.innerHTML     = '<div class="spinner"></div> Resizing images, please wait&hellip;';
-
-      try {
-        const formData = new FormData();
-        selectedFiles.forEach(f => formData.append('files', f));
-
-        const response = await fetch('/resize', { method: 'POST', body: formData });
-        const errors   = response.headers.get('X-Processing-Errors');
-
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
-          throw new Error(err.detail || 'Processing failed');
-        }
-
-        const blob = await response.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = 'resized-images.zip';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        status.className = 'status success';
-        status.textContent = '&#10003; Done! Your ZIP is downloading.'
-          + (errors ? '  Note: ' + errors : '');
-
-      } catch (err) {
-        status.className  = 'status error';
-        status.textContent = '&#10007; ' + err.message;
+      function addFiles(newFiles) {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        files = [...files, ...newFiles.filter(f => allowed.includes(f.type))];
+        render();
       }
 
-      uploadBtn.disabled = false;
+      // exposed so onclick in innerHTML can call it scoped to this instance
+      const removeFile = (i) => { files.splice(i, 1); render(); };
+      // attach to a namespaced window key so inline onclick can reach it
+      window['_rm_' + btnId] = removeFile;
+
+      function formatSize(b) {
+        return b < 1024 * 1024 ? (b / 1024).toFixed(0) + ' KB' : (b / 1024 / 1024).toFixed(1) + ' MB';
+      }
+
+      function render() {
+        fileItems.innerHTML = '';
+        files.forEach((f, i) => {
+          const div = document.createElement('div');
+          div.className = 'file-item';
+          div.innerHTML = `
+            <span>&#128247;</span>
+            <span class="name">${f.name}</span>
+            <span class="size">${formatSize(f.size)}</span>
+            <span class="remove" onclick="window['_rm_${btnId}'](${i})" title="Remove">&#10005;</span>
+          `;
+          fileItems.appendChild(div);
+        });
+        fileList.style.display = files.length ? 'block' : 'none';
+        fileCount.textContent  = `${files.length} file${files.length !== 1 ? 's' : ''} selected`;
+        btn.disabled           = files.length === 0;
+        status.className       = 'status';
+      }
+
+      btn.addEventListener('click', async () => {
+        if (!files.length) return;
+        btn.disabled     = true;
+        status.className = 'status loading';
+        status.innerHTML = '<div class="spinner"></div> Resizing, please wait&hellip;';
+
+        try {
+          const fd = new FormData();
+          files.forEach(f => fd.append('files', f));
+
+          const res    = await fetch(endpoint, { method: 'POST', body: fd });
+          const errors = res.headers.get('X-Processing-Errors');
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+            throw new Error(err.detail || 'Processing failed');
+          }
+
+          const blob = await res.blob();
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          a.href = url; a.download = zipName;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          status.className  = 'status success';
+          status.textContent = '✓ Done! Your ZIP is downloading.' + (errors ? '  Note: ' + errors : '');
+        } catch (err) {
+          status.className  = 'status error';
+          status.textContent = '✗ ' + err.message;
+        }
+
+        btn.disabled = false;
+      });
+    }
+
+    makeUploader({
+      dropZoneId: 'dz-resizer', fileInputId: 'fi-resizer',
+      fileListId: 'fl-resizer', fileCountId: 'fc-resizer', fileItemsId: 'fi-items-resizer',
+      btnId: 'btn-resizer', statusId: 'st-resizer',
+      endpoint: '/resize', zipName: 'resized-images.zip',
+    });
+
+    makeUploader({
+      dropZoneId: 'dz-logo', fileInputId: 'fi-logo',
+      fileListId: 'fl-logo', fileCountId: 'fc-logo', fileItemsId: 'fi-items-logo',
+      btnId: 'btn-logo', statusId: 'st-logo',
+      endpoint: '/resize-logo', zipName: 'resized-logos.zip',
     });
   </script>
 </body>
